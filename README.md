@@ -1,4 +1,4 @@
-# turtlebot3_datasets
+# turtlebot3_datasets --> version ROS2
 
 This package provides helper scripts to download and use datasets for the **Introduction to Robotics** labs.
 
