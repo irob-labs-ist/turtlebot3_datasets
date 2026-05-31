@@ -1,82 +1,125 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
+"""
+calculate_error.py  —  ROS 2 version
+=====================================
+Computes the 2D localisation error in real time by comparing two TF frames:
 
-import rospy
-import rosbag
-import sys
+  gt_frame  (default: 'mocap_laser_link') — ground-truth from the motion capture system
+  est_frame (default: 'base_scan')        — estimated pose from the localisation algorithm
+
+At each timer tick the node looks up the transform between the two frames and
+prints the Euclidean distance (X, Y only) in millimetres.
+
+Usage
+-----
+    ros2 run turtlebot3_datasets calculate_error
+
+    # Override frames:
+    ros2 run turtlebot3_datasets calculate_error \
+        --ros-args -p gt_frame:=mocap_laser_link -p est_frame:=base_scan
+
+    # Must be used with sim time when replaying a bag:
+    ros2 run turtlebot3_datasets calculate_error \
+        --ros-args -p use_sim_time:=true
+"""
+
 import argparse
+import sys
+
 import numpy
-from tf2_ros import Buffer, TransformListener
-from rosgraph_msgs.msg import Clock
+import rclpy
+from rclpy.duration import Duration
+from rclpy.node import Node
+from rclpy.time import Time
+from tf2_ros import Buffer, TransformListener, LookupException, ConnectivityException, ExtrapolationException
 
-class TransformHandler():
 
-    def __init__(self, gt_frame, est_frame, max_time_between=0.01):
-        self.gt_frame = gt_frame
+class ErrorCalculator(Node):
+
+    def __init__(self, gt_frame: str, est_frame: str, max_time_between: float = 0.5):
+        super().__init__('evaluation_node')
+
+        self.gt_frame  = gt_frame
         self.est_frame = est_frame
-        self.frames = [gt_frame, est_frame]
 
-        self.tf_buffer = Buffer(cache_time=rospy.Duration(max_time_between))
-        self.__tf_listener = TransformListener(self.tf_buffer)
+        # tf2 buffer and listener — listener requires the node as second argument in ROS 2
+        self.tf_buffer   = Buffer(cache_time=Duration(seconds=max_time_between))
+        self.tf_listener = TransformListener(self.tf_buffer, self)
 
-        #self.warn_timer = rospy.Timer(rospy.Duration(5), self.__warn_timer_cb)
+        # Warn if sim time is not enabled
+        self.declare_parameter('use_sim_time', False)
+        if not self.get_parameter('use_sim_time').value:
+            self.get_logger().fatal(
+                'use_sim_time is False — you should run with '
+                '--ros-args -p use_sim_time:=true when replaying a bag.'
+            )
 
-    def __warn_timer_cb(self, evt):
+        # Timer at 1000 Hz (same rate as original script)
+        self.create_timer(0.001, self._timer_cb)
 
-        available_frames = self.tf_buffer.all_frames_as_string()
-        avail = True
-        for frame in self.frames:
-            if frame not in available_frames:
-                rospy.logwarn('Frame {} has not been seen yet'.format(frame))
-                avail = False
-        if avail:
-            self.warn_timer.shutdown()
+        self.get_logger().info(
+            'Listening to frames and computing error — press Ctrl-C to stop.\n'
+            '  Ground-truth frame : {}\n'
+            '  Estimated frame    : {}'.format(gt_frame, est_frame)
+        )
 
-    def get_transform(self, fixed_frame, target_frame):
-        # caller should handle the exceptions
-        return self.tf_buffer.lookup_transform(target_frame, fixed_frame, rospy.Time(0))
-
-
-def get_errors(transform):
-    tr = transform.transform.translation
-    return numpy.linalg.norm( [tr.x, tr.y] )
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--gt_frame', help='The child frame of the GT transform', default='mocap_laser_link')
-parser.add_argument('--est_frame', help='The child frame of the estimation transform', default='base_scan')
-
-args = parser.parse_args()
-
-gt_frame = args.gt_frame
-est_frame = args.est_frame
-
-rospy.init_node('evaluation_node')
-
-if rospy.rostime.is_wallclock():
-    rospy.logfatal('You should be using simulated time: rosparam set use_sim_time true')
-    sys.exit(1)
-
-rospy.loginfo('Waiting for clock')
-rospy.sleep(0.00001)
-
-handler = TransformHandler(gt_frame, est_frame, max_time_between=20) # 500ms
-
-rospy.loginfo('Listening to frames and computing error, press Ctrl-C to stop')
-sleeper = rospy.Rate(1000)
-try:
-    while not rospy.is_shutdown():
+    def _timer_cb(self):
         try:
-            t = handler.get_transform(gt_frame, est_frame)
-        except Exception as e:
-            rospy.logwarn(e)
-        else:
-            eucl = get_errors(t)
-            rospy.loginfo('Error (in mm): {:.2f}'.format(eucl * 1e3))
+            transform = self.tf_buffer.lookup_transform(
+                self.est_frame,   # target frame
+                self.gt_frame,    # source frame
+                Time(),           # Time() = latest available (equivalent to rospy.Time(0))
+            )
+        except (LookupException, ConnectivityException, ExtrapolationException) as e:
+            self.get_logger().warn(str(e), throttle_duration_sec=2.0)
+            return
 
-        try:
-            sleeper.sleep()
-        except rospy.exceptions.ROSTimeMovedBackwardsException as e:
-            rospy.logwarn(e)
+        error = self._get_error(transform)
+        self.get_logger().info('Error (in mm): {:.2f}'.format(error * 1e3))
 
-except rospy.exceptions.ROSInterruptException:
-    pass
+    @staticmethod
+    def _get_error(transform) -> float:
+        """Return the 2D Euclidean distance (X, Y) from the transform translation."""
+        tr = transform.transform.translation
+        return float(numpy.linalg.norm([tr.x, tr.y]))
+
+
+def main(args=None):
+    parser = argparse.ArgumentParser(
+        description='Compute real-time 2D localisation error between two TF frames.'
+    )
+    parser.add_argument(
+        '--gt_frame',
+        default='mocap_laser_link',
+        help='Child frame of the ground-truth transform (default: mocap_laser_link)',
+    )
+    parser.add_argument(
+        '--est_frame',
+        default='base_scan',
+        help='Child frame of the estimated pose transform (default: base_scan)',
+    )
+
+    # Strip ROS 2 arguments before parsing with argparse
+    known_args, _ = parser.parse_known_args(
+        [a for a in (sys.argv[1:] if args is None else args)
+         if not a.startswith('--ros-args') and not a.startswith('__')]
+    )
+
+    rclpy.init(args=args)
+
+    node = ErrorCalculator(
+        gt_frame=known_args.gt_frame,
+        est_frame=known_args.est_frame,
+    )
+
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

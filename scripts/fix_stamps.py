@@ -1,56 +1,168 @@
-#!/usr/bin/env python2.7
-import rospy
-import rosbag
+#!/usr/bin/env python3
+"""
+fix_stamps.py  —  ROS 2 / rosbag2 version
+==========================================
+Fix a specific TF time-stamp offset in a rosbag2 bag.
+
+The script works on bags where a constant time difference exists between the
+robot TF tree and the motion-capture TF tree.  It reads every message from the
+input bag, adjusts the stamps of any /tf transform whose *parent* frame matches
+PARENT_FRAME, and writes the corrected messages to a new bag.
+
+For messages that carry a header the recorded *bag* timestamp is replaced by
+the message's own header.stamp (this is what the original ROS 1 script did).
+
+Usage
+-----
+    python3 fix_stamps.py TIME_OFFSET INPUT_BAG_DIR OUTPUT_BAG_DIR
+
+Example (slam_easy.bag — measured offset ≈ 3961.46 s):
+    python3 fix_stamps.py 3961.461462163 slam_easy fixed_slam_easy
+
+Dependencies
+------------
+    pip install rosbag2_py rclpy
+
+Notes
+-----
+* Input and output are *directories* (rosbag2 format), not single .bag files.
+* The default storage plugin is 'sqlite3'; change STORAGE_ID if your bag uses
+  a different backend (e.g. 'mcap').
+* tf2_msgs/TFMessage replaces the ROS 1 tf/tfMessage type.
+"""
+
 import sys
-import tf as tfros
+import os
 
-'''
-Use this file to fix a specific TF time stamp (did not synchronize time, only works if the time difference is constant (not a big assumption for a small datasets))
+try:
+    import rosbag2_py
+except ImportError:
+    sys.exit(
+        "rosbag2_py not found.\n"
+        "Install it with:  pip install rosbag2_py\n"
+        "or via apt:       sudo apt install ros-$ROS_DISTRO-rosbag2"
+    )
 
-The result of this script is the same bag but with header stamps instead of the recorded time of receiving each msg.
-For the 'mocap' TFs it will also subtract TIME_OFFSET to the msg stamp.
+from rclpy.serialization import deserialize_message, serialize_message
+from rclpy.time import Duration
+from rosidl_runtime_py.utilities import get_message
 
-In case of slam_easy.bag , measured (1539703367.760256098 - 1539699406.298793935) = 3961.461462163 second offset between the robot TF and the mocap TF
-'''
-
+# ── Configuration ──────────────────────────────────────────────────────────────
 PARENT_FRAME = 'mocap'
+STORAGE_ID   = 'sqlite3'   # or 'mcap'
+# ───────────────────────────────────────────────────────────────────────────────
 
-argc = len(sys.argv)
-if argc < 4:
-    print('Usage: {} TIME_OFFSET INPUT_BAG OUTPUT_BAG'.format(sys.argv[0]))
-    sys.exit(1)
 
-offset = float(sys.argv[1])
-in_bag_file = sys.argv[2]
-out_bag_file = sys.argv[3]
+def make_reader(bag_dir: str) -> rosbag2_py.SequentialReader:
+    reader = rosbag2_py.SequentialReader()
+    storage_opts = rosbag2_py.StorageOptions(uri=bag_dir, storage_id=STORAGE_ID)
+    conv_opts    = rosbag2_py.ConverterOptions(
+        input_serialization_format='cdr',
+        output_serialization_format='cdr',
+    )
+    reader.open(storage_opts, conv_opts)
+    return reader
 
-print('Applying offset of {:f} to frames which parent is {}'.format(offset, PARENT_FRAME))
 
-out_bag = rosbag.Bag( open(out_bag_file, 'wb'), mode='w', allow_unindexed=False )
-with rosbag.Bag( open(in_bag_file), mode='r', allow_unindexed=False ) as in_bag:
+def make_writer(bag_dir: str) -> rosbag2_py.SequentialWriter:
+    writer = rosbag2_py.SequentialWriter()
+    storage_opts = rosbag2_py.StorageOptions(uri=bag_dir, storage_id=STORAGE_ID)
+    conv_opts    = rosbag2_py.ConverterOptions(
+        input_serialization_format='cdr',
+        output_serialization_format='cdr',
+    )
+    writer.open(storage_opts, conv_opts)
+    return writer
+
+
+def ns_from_sec(sec: float) -> int:
+    """Convert floating-point seconds to integer nanoseconds."""
+    return int(sec * 1e9)
+
+
+def main():
+    if len(sys.argv) < 4:
+        print('Usage: {} TIME_OFFSET INPUT_BAG_DIR OUTPUT_BAG_DIR'.format(sys.argv[0]))
+        sys.exit(1)
+
+    offset_sec  = float(sys.argv[1])
+    in_bag_dir  = sys.argv[2]
+    out_bag_dir = sys.argv[3]
+
+    offset_ns = ns_from_sec(offset_sec)
+
+    print('Applying offset of {:f} s to frames whose parent is "{}"'.format(
+        offset_sec, PARENT_FRAME))
+    print('Input  bag: {}'.format(in_bag_dir))
+    print('Output bag: {}'.format(out_bag_dir))
+
+    # ── Open reader ────────────────────────────────────────────────────────────
+    reader = make_reader(in_bag_dir)
+    topic_types = reader.get_all_topics_and_types()
+
+    # Build a map: topic_name -> message_type_string
+    type_map = {t.name: t.type for t in topic_types}
+
+    # ── Open writer and register all topics ────────────────────────────────────
+    writer = make_writer(out_bag_dir)
+    for t in topic_types:
+        writer.create_topic(t)
+
+    # ── Progress bar (optional) ─────────────────────────────────────────────────
     try:
         import progressbar
-    except:
-        print("To get a progress bar display:\npip install --user progressbar2")
+        total = reader.get_metadata().message_count
+        bar = progressbar.ProgressBar(max_value=total, redirect_stdout=True)
+    except Exception:
+        print("Tip: install progressbar2 for a progress indicator:  pip install progressbar2")
         bar = None
-    else:
-        bar = progressbar.ProgressBar(max_value=in_bag.get_message_count(), redirect_stdout=True, end=' ')
 
     msg_counter = 0
-    for topic, msg, t in in_bag.read_messages():
+
+    # ── Main loop ───────────────────────────────────────────────────────────────
+    while reader.has_next():
+        topic, raw_data, bag_ts_ns = reader.read_next()
         msg_counter += 1
         if bar:
             bar.update(msg_counter)
 
-        if topic == "/tf":
-            for idx, t in enumerate(msg.transforms):
-                if msg.transforms[idx].header.frame_id == PARENT_FRAME:
-                    msg.transforms[idx].header.stamp -= rospy.Duration(offset)
-            out_bag.write(topic, msg, msg.transforms[0].header.stamp)
+        msg_type_str = type_map.get(topic)
+        MsgClass = get_message(msg_type_str)
+        msg = deserialize_message(raw_data, MsgClass)
 
-        elif msg._has_header:
-            out_bag.write(topic, msg, msg.header.stamp)
+        if topic == '/tf':
+            # tf2_msgs/TFMessage
+            for transform in msg.transforms:
+                if transform.header.frame_id == PARENT_FRAME:
+                    # Subtract the offset from the stamp
+                    stamp_ns = (
+                        transform.header.stamp.sec * 10**9
+                        + transform.header.stamp.nanosec
+                        - offset_ns
+                    )
+                    transform.header.stamp.sec     = stamp_ns // 10**9
+                    transform.header.stamp.nanosec = stamp_ns  % 10**9
+
+            # Use the stamp of the first transform as the bag timestamp
+            first = msg.transforms[0].header.stamp
+            out_ts_ns = first.sec * 10**9 + first.nanosec
+            writer.write(topic, serialize_message(msg), out_ts_ns)
+
+        elif hasattr(msg, 'header'):
+            # Any message with a header: use header.stamp as bag timestamp
+            out_ts_ns = msg.header.stamp.sec * 10**9 + msg.header.stamp.nanosec
+            writer.write(topic, serialize_message(msg), out_ts_ns)
+
         else:
-            out_bag.write(topic, msg, t)
+            # No header: keep original bag timestamp
+            writer.write(topic, raw_data, bag_ts_ns)
 
-out_bag.close()
+    if bar:
+        bar.finish()
+
+    print('\nDone. Processed {} messages.'.format(msg_counter))
+    print('Output written to: {}'.format(out_bag_dir))
+
+
+if __name__ == '__main__':
+    main()
