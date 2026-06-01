@@ -25,6 +25,14 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# Install publish_initial_tf as a named executable (no .py extension)
+# so that `ros2 run turtlebot3_datasets publish_initial_tf` works.
+install(PROGRAMS
+  turtlebot3_datasets/publish_initial_tf.py
+  RENAME publish_initial_tf
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # Install launch files
 install(DIRECTORY
   launch

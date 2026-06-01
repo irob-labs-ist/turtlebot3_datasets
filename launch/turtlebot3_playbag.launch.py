@@ -3,7 +3,6 @@ Launch file for playing a turtlebot3 rosbag2 dataset.
 
 Before launching:
     1. Edit the `bag_path` variable below to point to your rosbag2 directory.
-    2. Optionally change the `model` argument if not using waffle_pi.
 
 Usage:
     ros2 launch turtlebot3_datasets turtlebot3_playbag.launch.py
@@ -45,6 +44,12 @@ def generate_launch_description():
         'viz',
         default_value='rviz2',
         description='Visualisation tool to launch: rviz2 | foxglove',
+    )
+
+    fixed_frame_arg = DeclareLaunchArgument(
+        'fixed_frame',
+        default_value='odom',
+        description='Fixed frame to connect mocap to (odom | map | ...)',
     )
 
     # ---------------------------------------------------------------------------
@@ -116,13 +121,13 @@ def generate_launch_description():
     # Can also be launched separately via:
     #   ros2 run turtlebot3_datasets publish_initial_tf odom
     # ---------------------------------------------------------------------------
-    # publish_initial_tf = Node(
-    #     package='turtlebot3_datasets',
-    #     executable='publish_initial_tf',
-    #     name='publish_initial_tf',
-    #     parameters=[{'use_sim_time': True}],
-    #     arguments=['odom'],   # fixed frame: odom | map | ...
-    # )
+    publish_initial_tf = Node(
+        package='turtlebot3_datasets',
+        executable='publish_initial_tf',
+        name='publish_initial_tf',
+        parameters=[{'use_sim_time': True}],
+        arguments=[LaunchConfiguration('fixed_frame')],
+    )
 
     # ---------------------------------------------------------------------------
     # EKF robot localisation  (uncomment when using robot_localization)
@@ -146,16 +151,14 @@ def generate_launch_description():
     # )
 
     # ---------------------------------------------------------------------------
-    # Visualisation — escolhe uma opção via argumento 'viz':
+    # Visualisation — chose an option for 'viz':
     #
     #   ros2 launch turtlebot3_datasets turtlebot3_playbag.launch.py viz:=rviz2
     #   ros2 launch turtlebot3_datasets turtlebot3_playbag.launch.py viz:=foxglove
     #
     # ---------------------------------------------------------------------------
 
-    # Opção A: RViz2 (padrão)
-    # Lança automaticamente a janela de visualização.
-    # Instalação: sudo apt install ros-$ROS_DISTRO-rviz2
+    # Opção A: RViz2
     rviz_config = os.path.join(pkg_share, 'config', 'rviz2_config.rviz')
     rviz_node = Node(
         package='rviz2',
@@ -170,12 +173,10 @@ def generate_launch_description():
     )
 
     # Opção B: Foxglove
-    # Lança o foxglove_bridge (servidor WebSocket em ws://localhost:8765)
-    # e abre automaticamente o Foxglove Studio no browser.
-    # Depois de abrir o browser, clica em "Open Connection" e liga a:
-    #   ws://localhost:8765
+    # (WebSocket server at ws://localhost:8765)
+    #  
     #
-    # Instalação: sudo apt install ros-$ROS_DISTRO-foxglove-bridge
+    # Installation: sudo apt install ros-$ROS_DISTRO-foxglove-bridge
     foxglove_bridge = Node(
         package='foxglove_bridge',
         executable='foxglove_bridge',
@@ -187,7 +188,6 @@ def generate_launch_description():
         ),
     )
 
-    # Abre o Foxglove Studio no browser após 3 segundos (para o bridge ter tempo de arrancar)
     foxglove_browser = TimerAction(
         period=3.0,
         actions=[
@@ -207,15 +207,16 @@ def generate_launch_description():
     return LaunchDescription([
         model_arg,
         viz_arg,
+        fixed_frame_arg,
         set_turtlebot3_model,
         turtlebot3_remote,
         rosbag_play,
         rviz_node,
         foxglove_bridge,
         foxglove_browser,
+        publish_initial_tf,
         # Uncomment nodes above as needed:
         # map_server,
-        # publish_initial_tf,
         # ekf_node,
         # amcl_node,
     ])
