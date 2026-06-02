@@ -61,6 +61,19 @@ for BAG_FILE in "$DATA_DIR"/*.bag; do
     rosbags-convert --src "$BAG_FILE" --dst "$OUT_DIR"
 done
 
+# ── Fix metadata.yaml compatibility issue ─────────────────────────────────────
+# rosbags-convert stores offered_qos_profiles as a YAML sequence ([]),
+# but rosbag2's C++ parser expects it as a string. Replace all occurrences
+# so that `ros2 bag play` can parse the metadata without errors.
+echo ""
+echo "Fixing QoS profile metadata for rosbag2 compatibility..."
+for META in "$DATA_DIR"/*/metadata.yaml; do
+    if [ -f "$META" ]; then
+        sed -i 's/offered_qos_profiles: \[\]/offered_qos_profiles: ""/g' "$META"
+        echo "  Fixed: $META"
+    fi
+done
+
 echo ""
 echo "Done. Rosbag2 directories are in: $DATA_DIR"
 echo ""
