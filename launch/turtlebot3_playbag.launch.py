@@ -71,7 +71,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource([
             turtlebot3_bringup_share, '/launch/turtlebot3_state_publisher.launch.py'
         ]),
-        launch_arguments={'use_sim_time': 'true'}.items(),
+        launch_arguments={'use_sim_time': 'true', 'namespace': ''}.items(),
     )
 
     # ---------------------------------------------------------------------------

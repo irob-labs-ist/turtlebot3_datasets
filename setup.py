@@ -26,6 +26,9 @@ setup(
         # docs
         (os.path.join('share', package_name, 'docs'),
             glob('docs/*')),
+        # scripts installed to lib/ so ros2 run can find them
+        (os.path.join('lib', package_name),
+            glob('scripts/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
