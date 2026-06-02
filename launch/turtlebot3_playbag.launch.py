@@ -69,9 +69,9 @@ def generate_launch_description():
 
     turtlebot3_remote = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
-            turtlebot3_bringup_share, '/launch/turtlebot3_remote.launch.py'
+            turtlebot3_bringup_share, '/launch/turtlebot3_state_publisher.launch.py'
         ]),
-        launch_arguments={'model': LaunchConfiguration('model')}.items(),
+        launch_arguments={'use_sim_time': 'true'}.items(),
     )
 
     # ---------------------------------------------------------------------------
