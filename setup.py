@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 import os
 from glob import glob
 
-package_name = 'turtlebot3_datasets'
+package_name = 'turtlebot_datasets'
 
 setup(
     name=package_name,
@@ -34,13 +34,13 @@ setup(
     zip_safe=True,
     maintainer='Guilherme Lawless',
     maintainer_email='guilherme.lawless@tecnico.ulisboa.pt',
-    description='Datasets to be used with turtlebot3 waffle pi (ROS 2)',
+    description='Datasets to be used with turtlebot waffle pi (ROS 2)',
     license='GPLv3',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             # Publishes the initial mocap -> fixed_frame static transform
-            'publish_initial_tf = turtlebot3_datasets.publish_initial_tf:main',
+            'publish_initial_tf = turtlebot_datasets.publish_initial_tf:main',
         ],
     },
 )

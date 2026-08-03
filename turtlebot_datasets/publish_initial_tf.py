@@ -9,8 +9,8 @@ This replaces the ROS 1 shell script that called:
     rosrun tf2_ros static_transform_publisher x y z qx qy qz qw parent child
 
 Usage (as a ROS 2 node):
-    ros2 run turtlebot3_datasets publish_initial_tf -- odom
-    ros2 run turtlebot3_datasets publish_initial_tf -- map
+    ros2 run turtlebot_datasets publish_initial_tf -- odom
+    ros2 run turtlebot_datasets publish_initial_tf -- map
 
 The transform values below were measured at the beginning of the dataset:
     translation:  x=0.935  y=1.340  z=-0.023

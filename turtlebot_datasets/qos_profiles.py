@@ -1,7 +1,7 @@
 """
 qos_profiles.py
 ===============
-Reusable QoS profiles for turtlebot3_datasets nodes.
+Reusable QoS profiles for turtlebot_datasets nodes.
 
 ROS 2 requires explicit QoS negotiation between publishers and subscribers.
 Mismatches (e.g. a reliable subscriber talking to a best-effort publisher)

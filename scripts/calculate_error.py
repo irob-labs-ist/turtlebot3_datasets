@@ -12,14 +12,14 @@ prints the Euclidean distance (X, Y only) in millimetres.
 
 Usage
 -----
-    ros2 run turtlebot3_datasets calculate_error
+    ros2 run turtlebot_datasets calculate_error
 
     # Override frames:
-    ros2 run turtlebot3_datasets calculate_error \
+    ros2 run turtlebot_datasets calculate_error \
         --ros-args -p gt_frame:=mocap_laser_link -p est_frame:=base_scan
 
     # Must be used with sim time when replaying a bag:
-    ros2 run turtlebot3_datasets calculate_error \
+    ros2 run turtlebot_datasets calculate_error \
         --ros-args -p use_sim_time:=true
 """
 

@@ -1,4 +1,4 @@
-# turtlebot3_datasets — ROS 2
+# turtlebot_datasets — ROS 2
 
 This package provides helper scripts to download and use datasets for the **Introduction to Robotics** labs.
 
@@ -28,10 +28,10 @@ The ground-truth data is provided in the `/tf` topic, as a transform `mocap -> m
 
 ![transform](docs/gt_transform.svg)
 
-The initial transform can be used to connect `mocap` to `odom`, `map`, or another fixed frame. This is done by running [publish_initial_tf](turtlebot3_datasets/publish_initial_tf.py):
+The initial transform can be used to connect `mocap` to `odom`, `map`, or another fixed frame. This is done by running [publish_initial_tf](turtlebot_datasets/publish_initial_tf.py):
 
 ```bash
-ros2 run turtlebot3_datasets publish_initial_tf -- odom   # or map, etc.
+ros2 run turtlebot_datasets publish_initial_tf -- odom   # or map, etc.
 ```
 
 Images `docs/unconnected_tree.svg` and `docs/connected_tree.svg` show the frame setup before and after adding the `mocap -> odom` transform. These can be regenerated with:
@@ -52,7 +52,7 @@ A few things to be aware of before starting:
 
 - **Always play the bag with `--clock`** — this publishes the `/clock` topic. You can also use `--rate RATE` to speed up or slow down playback, and `--start-offset SECONDS` to jump into the bag.
 
-- **QoS profiles** — ROS 2 requires publishers and subscribers to agree on a QoS policy. If a node is not receiving sensor data from the bag, the most common cause is a QoS mismatch. Check [`turtlebot3_datasets/qos_profiles.py`](turtlebot3_datasets/qos_profiles.py) for the profiles used in this package.
+- **QoS profiles** — ROS 2 requires publishers and subscribers to agree on a QoS policy. If a node is not receiving sensor data from the bag, the most common cause is a QoS mismatch. Check [`turtlebot_datasets/qos_profiles.py`](turtlebot_datasets/qos_profiles.py) for the profiles used in this package.
 
 - More information on the `ros2 bag` tool: `ros2 bag --help`
 
@@ -69,7 +69,7 @@ sudo apt install python3-pip python3-rosbag2 ros-$ROS_DISTRO-rosbag2 \
                  ros-$ROS_DISTRO-foxglove-bridge   # optional, only needed for viz:=foxglove
 ```
 
-Set the Turtlebot3 model environment variable — this is required before any `ros2 launch` command. Add it to your `~/.bashrc` so it persists across terminals:
+Set the Turtlebot model environment variable — this is required before any `ros2 launch` command. Add it to your `~/.bashrc` so it persists across terminals:
 
 ```bash
 echo "export TURTLEBOT3_MODEL=waffle_pi" >> ~/.bashrc
@@ -79,21 +79,19 @@ source ~/.bashrc
 ### 2. Install Python prerequisites
 
 ```bash
-pip install gdown rosbags      # rosbags provides rosbags-convert
+pip install gdown
 ```
-
-`rosbags-convert` is needed to convert the downloaded ROS 1 `.bag` file into rosbag2 format.
 
 ### 3. Clone and build the package
 
 ```bash
 # Clone into the src directory of your ROS 2 workspace
 cd ~/ros2_ws/src
-git clone https://github.com/irob-labs-ist/turtlebot3_datasets.git
+git clone https://github.com/irob-labs-ist/turtlebot_datasets.git
 
 # Build with colcon (replaces catkin_make)
 cd ~/ros2_ws
-colcon build --packages-select turtlebot3_datasets
+colcon build --packages-select turtlebot_datasets
 
 # Source the workspace overlay (replaces source devel/setup.bash)
 source install/setup.bash
@@ -102,43 +100,43 @@ source install/setup.bash
 ### 4. Download the dataset
 
 ```bash
-cd ~/ros2_ws/src/turtlebot3_datasets/scripts
+cd ~/ros2_ws/src/turtlebot_datasets/scripts
 bash download_dataset.sh
 ```
 
-This downloads the archive, extracts it into the `data/` directory, and automatically converts the ROS 1 `.bag` file to rosbag2 format using `rosbags-convert`.
+This downloads the archive and extracts the rosbag2 directories into the `data/` folder, ready to use directly with `ros2 bag play`.
 
 ### 5. Publish the initial static transform
 
 This connects the motion-capture reference frame (`mocap`) to the robot's fixed frame (`odom`, `map`, …). Run it in a separate terminal:
 
 ```bash
-ros2 run turtlebot3_datasets publish_initial_tf -- odom
+ros2 run turtlebot_datasets publish_initial_tf -- odom
 # replace 'odom' with 'map' or another fixed frame as needed
 ```
 
-You can also add this as a node directly inside [turtlebot3_playbag.launch.py](launch/turtlebot3_playbag.launch.py) by uncommenting the `publish_initial_tf` block.
+You can also add this as a node directly inside [turtlebot_playbag.launch.py](launch/turtlebot_playbag.launch.py) by uncommenting the `publish_initial_tf` block.
 
 ### 6. Edit the bag path and launch
 
-Before launching, open [launch/turtlebot3_playbag.launch.py](launch/turtlebot3_playbag.launch.py) and set the `bag_path` variable to the full path of your rosbag2 directory:
+Before launching, open [launch/turtlebot_playbag.launch.py](launch/turtlebot_playbag.launch.py) and set the `bag_path` variable to the full path of your rosbag2 directory:
 
 ```python
-# inside turtlebot3_playbag.launch.py
-bag_path = '/home/<user>/ros2_ws/src/turtlebot3_datasets/data/fixed_slam_easy'
+# inside turtlebot_playbag.launch.py
+bag_path = '/home/<user>/ros2_ws/src/turtlebot_datasets/data/fixed_slam_easy'
 ```
 
 Then launch:
 
 ```bash
 # RViz2 (default)
-ros2 launch turtlebot3_datasets turtlebot3_playbag.launch.py
+ros2 launch turtlebot_datasets turtlebot_playbag.launch.py
 
 # Foxglove (opens browser at app.foxglove.dev — connect to ws://localhost:8765)
-ros2 launch turtlebot3_datasets turtlebot3_playbag.launch.py viz:=foxglove
+ros2 launch turtlebot_datasets turtlebot_playbag.launch.py viz:=foxglove
 
 # Change robot model if needed
-ros2 launch turtlebot3_datasets turtlebot3_playbag.launch.py model:=burger
+ros2 launch turtlebot_datasets turtlebot_playbag.launch.py model:=burger
 ```
 
 This launches:
@@ -151,17 +149,17 @@ This launches:
 While the bag is playing, run in a separate terminal to compute the 2D error between the ground-truth and estimated pose in real time:
 
 ```bash
-ros2 run turtlebot3_datasets calculate_error.py \
+ros2 run turtlebot_datasets calculate_error.py \
     --ros-args -p use_sim_time:=true
 
 # Override frames if needed (defaults: gt=mocap_laser_link, est=base_scan)
-ros2 run turtlebot3_datasets calculate_error.py \
+ros2 run turtlebot_datasets calculate_error.py \
     --ros-args -p use_sim_time:=true -p gt_frame:=mocap_laser_link -p est_frame:=base_scan
 ```
 
 ### 8. Launch a map server and/or other algorithms
 
-Uncomment the relevant blocks in [turtlebot3_playbag.launch.py](launch/turtlebot3_playbag.launch.py) to add:
+Uncomment the relevant blocks in [turtlebot_playbag.launch.py](launch/turtlebot_playbag.launch.py) to add:
 - `nav2_map_server` for a static map
 - `nav2_amcl` for Monte-Carlo localisation
 - `robot_localization` (EKF) for odometry fusion
@@ -170,7 +168,7 @@ Uncomment the relevant blocks in [turtlebot3_playbag.launch.py](launch/turtlebot
 
 ## Fixing stamp offsets (advanced)
 
-If you work with a raw, un-fixed bag, you can apply the timestamp correction yourself:
+The `fixed_slam_easy` bag distributed with this package has already had its timestamps corrected. The [fix_stamps.py](scripts/fix_stamps.py) script is provided for reference only, in case you need to apply the same correction to a different bag:
 
 ```bash
 python3 scripts/fix_stamps.py 3961.461462163 slam_easy fixed_slam_easy

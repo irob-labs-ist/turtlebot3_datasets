@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>turtlebot3_datasets</name>
+  <name>turtlebot_datasets</name>
   <version>0.0.2</version>
-  <description>Datasets to be used with turtlebot3 waffle pi (ROS 2)</description>
+  <description>Datasets to be used with turtlebot waffle pi (ROS 2)</description>
 
   <maintainer email="guilherme.lawless@tecnico.ulisboa.pt">Guilherme Lawless</maintainer>
   <maintainer email="joaogquintas@tecnico.ulisboa.pt">Joao Quintas</maintainer>

@@ -1,6 +1,6 @@
-# Migração do turtlebot3_datasets de ROS 1 para ROS 2
+# Migração do turtlebot_datasets de ROS 1 para ROS 2
 
-Este documento serve para explicar todas as modificações realizadas e todos os ficheiros criados durante a migração do turtlebot3_datasets 
+Este documento serve para explicar todas as modificações realizadas e todos os ficheiros criados durante a migração do turtlebot_datasets 
 de ROS 1 (Noetic) para ROS 2 (Humble/Iron).
 
 ---
@@ -19,7 +19,7 @@ ferramentas, sistema de build, formato de bags, APIs Python, nem sistema de lan�
 - cmake_minimum_required(VERSION 2.8.3) -> cmake_minimum_required(VERSION 3.5), versão mínima exigida pelo ament_cmake.
 - Removida toda a lógica catkin: find_package(catkin REQUIRED), catkin_package(), variáveis ${catkin_INCLUDE_DIRS}, ${CATKIN_PACKAGE_BIN_DESTINATION}, etc.
 - Adicionados find_package(ament_cmake REQUIRED) e find_package(ament_cmake_python REQUIRED) — ferramentas equivalentes no ROS 2.
-- Adicionado ament_python_install_package(${PROJECT_NAME}) para instalar o módulo Python turtlebot3_datasets/.
+- Adicionado ament_python_install_package(${PROJECT_NAME}) para instalar o módulo Python turtlebot_datasets/.
 - Adicionados install() explícitos para scripts, ficheiros de lançamento, dados e configurações — no ROS 2 não existem variáveis automáticas de destino como no catkin.
 - Adicionado ament_package() no fim — macro obrigatória no ROS 2 equivalente ao papel que catkin_package() tinha no ROS 1.
 
@@ -41,10 +41,10 @@ O package.xml foi atualizado para declarar as novas dependências ROS 2.
 
 ---
 
-### 3. launch/turtlebot3_playbag.launch.py (substitui o launch file antigo)
+### 3. launch/turtlebot_playbag.launch.py (substitui o launch file antigo)
 
 **O que mudou:**
-- O ficheiro XML turtlebot3_playbag.launch foi substituído por um ficheiro Python turtlebot3_playbag.launch.py.
+- O ficheiro XML turtlebot_playbag.launch foi substituído por um ficheiro Python turtlebot_playbag.launch.py.
 - <arg name="model"/> e <arg name="bag_name"/> -> DeclareLaunchArgument(...) com valores por defeito e descrições.
 - <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch"> -> IncludeLaunchDescription(PythonLaunchDescriptionSource([...])) usando FindPackageShare.
 - <param name="/use_sim_time" value="true"/> (global, ROS 1) -> parameters=[{'use_sim_time': True}] em cada nó individualmente.
@@ -76,7 +76,7 @@ O formato de bag do ROS 2 é completamente diferente. O ROS 2 usa rosbag2_py nã
 ### 5. scripts/download_dataset.sh
 
 **O que mudou:**
-- rospack find turtlebot3_datasets -> ros2 pkg prefix --share turtlebot3_datasets, o equivalente ROS 2 para localizar a dirétoria partilhado de um pacote.
+- rospack find turtlebot_datasets -> ros2 pkg prefix --share turtlebot_datasets, o equivalente ROS 2 para localizar a dirétoria partilhado de um pacote.
 Adicionado fallback para quando o pacote ainda não está instalado.
 - Adicionado passo de conversão automática: após extrair o .tar.gz, o script percorre todos os ficheiros .bag encontrados e executa rosbags-convert --src ... --dst ... para os converter para o formato rosbag2.
 - Adicionadas mensagens de ajuda sobre como reproduzir o bag convertido com ros2 bag play.
@@ -92,10 +92,10 @@ também os tipos de mensagens (e.g., tf/tfMessage para tf2_msgs/TFMessage).
 **O que mudou:**
 - Substituída toda a secção "Steps" com instruções ROS 2:
   - sudo apt install python-pip -> sudo apt install python3-pip python3-rosbag2 ros-$ROS_DISTRO-rosbag2 ...
-  - git clone ... && catkin_make && source ~/.bashrc -> colcon build --packages-select turtlebot3_datasets && source install/setup.bash
-  - roscd turtlebot3_datasets/scripts && bash download_dataset.sh -> bash scripts/download_dataset.sh (sem roscd)
-  - rosrun turtlebot3_datasets publish_initial_tf.sh odom -> ros2 run turtlebot3_datasets publish_initial_tf -- odom
-  - roslaunch turtlebot3_datasets turtlebot3_playbag.launch -> ros2 launch turtlebot3_datasets turtlebot3_playbag.launch.py
+  - git clone ... && catkin_make && source ~/.bashrc -> colcon build --packages-select turtlebot_datasets && source install/setup.bash
+  - roscd turtlebot_datasets/scripts && bash download_dataset.sh -> bash scripts/download_dataset.sh (sem roscd)
+  - rosrun turtlebot_datasets publish_initial_tf.sh odom -> ros2 run turtlebot_datasets publish_initial_tf -- odom
+  - roslaunch turtlebot_datasets turtlebot_playbag.launch -> ros2 launch turtlebot_datasets turtlebot_playbag.launch.py
   - rosbag info -> ros2 bag info
   - rosbag play --clock -> ros2 bag play --clock
 
@@ -113,13 +113,13 @@ Todos os comandos ROS 1 são inválidos no ROS 2.
 
 - setup.py
 
-Define o pacote Python turtlebot3_datasets para o colcon e para o pip.
-Lista os data_files a instalar (ficheiros de lançamento, configurações, dados, etc.) e declara o entry_point e publish_initial_tf, que torna o comando ros2 run turtlebot3_datasets publish_initial_tf disponível após o build.
+Define o pacote Python turtlebot_datasets para o colcon e para o pip.
+Lista os data_files a instalar (ficheiros de lançamento, configurações, dados, etc.) e declara o entry_point e publish_initial_tf, que torna o comando ros2 run turtlebot_datasets publish_initial_tf disponível após o build.
 Adicionada opção para correr com rviz2 ou com foxglove (publica o nó e abre a versão web, é necessário colocar ws://localhost:8765 no site)
 Esta opção é ativada como parametro:
 
-ros2 launch turtlebot3_datasets turtlebot3_playbag.launch.py viz:=foxglove
-ros2 launch turtlebot3_datasets turtlebot3_playbag.launch.py viz:=rviz2
+ros2 launch turtlebot_datasets turtlebot_playbag.launch.py viz:=foxglove
+ros2 launch turtlebot_datasets turtlebot_playbag.launch.py viz:=rviz2
 
 No ROS 2 com ament_cmake_python, o setup.py é obrigatório para que o colcon saiba como instalar o módulo Python e os seus recursos associados.
 No ROS 1 com catkin, os scripts eram simplesmente copiados, no ROS 2 são instalados como um pacote Python com entry points.
@@ -133,7 +133,7 @@ Configura as dirétorias de instalação dos scripts Python gerados pelo setup.p
 ---
 
 
-- resource/turtlebot3_datasets (ficheiro vazio)
+- resource/turtlebot_datasets (ficheiro vazio)
 
 Marcador do índice ament. É um ficheiro vazio cujo nome corresponde ao nome do pacote, colocado em resource/. 
 O ament_index (equivalente ao rospack do ROS 1) usa este ficheiro para registar e descobrir o pacote no sistema.
@@ -144,16 +144,16 @@ Sem este marcador, ros2 pkg list e ros2 pkg prefix não encontram o pacote, e qu
 ---
 
 
-- turtlebot3_datasets/__init__.py (ficheiro vazio)
+- turtlebot_datasets/__init__.py (ficheiro vazio)
 
-Torna a dirétoria turtlebot3_datasets/ num módulo Python importável. 
-Permite que os outros ficheiros do pacote (como publish_initial_tf.py e qos_profiles.py) sejam importados com from turtlebot3_datasets.qos_profiles import SENSOR_QOS.
+Torna a dirétoria turtlebot_datasets/ num módulo Python importável. 
+Permite que os outros ficheiros do pacote (como publish_initial_tf.py e qos_profiles.py) sejam importados com from turtlebot_datasets.qos_profiles import SENSOR_QOS.
 Sem este ficheiro, o Python não reconhece a dirétoria como um módulo e os imports falham.
 
 ---
 
 
-- turtlebot3_datasets/publish_initial_tf.py (substitui o publish_initial_tf em scripts)
+- turtlebot_datasets/publish_initial_tf.py (substitui o publish_initial_tf em scripts)
 
 Substitui o script bash scripts/publish_initial_tf.sh. 
 É um nó rclpy que publica a transformação estática mocap -> <fixed_frame> no tópico /tf_static, com QoS TRANSIENT_LOCAL .
@@ -169,7 +169,7 @@ Um script com ros2 run tf2_ros static_transform_publisher também funcionaria, m
 ---
 
 
-- turtlebot3_datasets/qos_profiles.py
+- turtlebot_datasets/qos_profiles.py
 
 Define perfis de QoS (Quality of Service) reutilizáveis para os nós deste pacote:
 - STATIC_TF_QOS — para /tf_static: TRANSIENT_LOCAL + RELIABLE, garante entrega a subscribers tardios.

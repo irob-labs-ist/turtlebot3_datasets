@@ -1,13 +1,13 @@
 """
-Launch file for playing a turtlebot3 rosbag2 dataset.
+Launch file for playing a turtlebot rosbag2 dataset.
 
 Before launching:
     1. Edit the `bag_path` variable below to point to your rosbag2 directory.
 
 Usage:
-    ros2 launch turtlebot3_datasets turtlebot3_playbag.launch.py
-    ros2 launch turtlebot3_datasets turtlebot3_playbag.launch.py model:=waffle_pi
-    ros2 launch turtlebot3_datasets turtlebot3_playbag.launch.py viz:=foxglove
+    ros2 launch turtlebot_datasets turtlebot_playbag.launch.py
+    ros2 launch turtlebot_datasets turtlebot_playbag.launch.py model:=waffle_pi
+    ros2 launch turtlebot_datasets turtlebot_playbag.launch.py viz:=foxglove
 """
 
 import os
@@ -29,7 +29,7 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    pkg_share = get_package_share_directory('turtlebot3_datasets')
+    pkg_share = get_package_share_directory('turtlebot_datasets')
 
     # ---------------------------------------------------------------------------
     # Launch arguments
@@ -54,22 +54,22 @@ def generate_launch_description():
 
     # ---------------------------------------------------------------------------
     # Set TURTLEBOT3_MODEL environment variable from the 'model' argument.
-    # turtlebot3_remote.launch.py reads this env var — without it the URDF
+    # turtlebot_remote.launch.py reads this env var — without it the URDF
     # cannot be loaded and the launch will fail.
     # ---------------------------------------------------------------------------
-    set_turtlebot3_model = SetEnvironmentVariable(
+    set_turtlebot_model = SetEnvironmentVariable(
         name='TURTLEBOT3_MODEL',
         value=LaunchConfiguration('model'),
     )
 
     # ---------------------------------------------------------------------------
-    # Turtlebot3 remote (URDF / robot_state_publisher + joint_state_publisher)
+    # Turtlebot remote (URDF / robot_state_publisher + joint_state_publisher)
     # ---------------------------------------------------------------------------
-    turtlebot3_bringup_share = FindPackageShare('turtlebot3_bringup')
+    turtlebot_bringup_share = FindPackageShare('turtlebot3_bringup')
 
-    turtlebot3_remote = IncludeLaunchDescription(
+    turtlebot_remote = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
-            turtlebot3_bringup_share, '/launch/turtlebot3_state_publisher.launch.py'
+            turtlebot_bringup_share, '/launch/turtlebot3_state_publisher.launch.py'
         ]),
         launch_arguments={'use_sim_time': 'true', 'namespace': ''}.items(),
     )
@@ -80,7 +80,7 @@ def generate_launch_description():
     # when --clock is passed.
     #
     # !! INSERT THE FULL PATH TO YOUR BAG DIRECTORY BELOW !!
-    # Example: '/home/user/ros2_ws/src/turtlebot3_datasets/data/fixed_slam_easy'
+    # Example: '/home/user/ros2_ws/src/turtlebot_datasets/data/fixed_slam_easy'
     # ---------------------------------------------------------------------------
     bag_path = '/INSERT/BAG/PATH/HERE'
 
@@ -119,10 +119,10 @@ def generate_launch_description():
     # ---------------------------------------------------------------------------
     # Static TF: mocap -> odom  (publishes the initial ground-truth transform)
     # Can also be launched separately via:
-    #   ros2 run turtlebot3_datasets publish_initial_tf odom
+    #   ros2 run turtlebot_datasets publish_initial_tf odom
     # ---------------------------------------------------------------------------
     publish_initial_tf = Node(
-        package='turtlebot3_datasets',
+        package='turtlebot_datasets',
         executable='publish_initial_tf',
         name='publish_initial_tf',
         parameters=[{'use_sim_time': True}],
@@ -151,14 +151,14 @@ def generate_launch_description():
     # )
 
     # ---------------------------------------------------------------------------
-    # Visualisation — chose an option for 'viz':
+    # Visualisation — choose an option for 'viz':
     #
-    #   ros2 launch turtlebot3_datasets turtlebot3_playbag.launch.py viz:=rviz2
-    #   ros2 launch turtlebot3_datasets turtlebot3_playbag.launch.py viz:=foxglove
+    #   ros2 launch turtlebot_datasets turtlebot_playbag.launch.py viz:=rviz2
+    #   ros2 launch turtlebot_datasets turtlebot_playbag.launch.py viz:=foxglove
     #
     # ---------------------------------------------------------------------------
 
-    # Opção A: RViz2
+    # Option A: RViz2
     rviz_config = os.path.join(pkg_share, 'config', 'rviz2_config.rviz')
     rviz_node = Node(
         package='rviz2',
@@ -172,7 +172,7 @@ def generate_launch_description():
         ),
     )
 
-    # Opção B: Foxglove
+    # Option B: Foxglove
     # (WebSocket server at ws://localhost:8765)
     #  
     #
@@ -208,8 +208,8 @@ def generate_launch_description():
         model_arg,
         viz_arg,
         fixed_frame_arg,
-        set_turtlebot3_model,
-        turtlebot3_remote,
+        set_turtlebot_model,
+        turtlebot_remote,
         rosbag_play,
         rviz_node,
         foxglove_bridge,
