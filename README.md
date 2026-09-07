@@ -87,7 +87,7 @@ pip install gdown
 ```bash
 # Clone into the src directory of your ROS 2 workspace
 cd ~/ros2_ws/src
-git clone https://github.com/irob-labs-ist/turtlebot_datasets.git
+git clone https://github.com/irob-labs-ist/datasets.git
 
 # Build with colcon (replaces catkin_make)
 cd ~/ros2_ws
@@ -100,7 +100,7 @@ source install/setup.bash
 ### 4. Download the dataset
 
 ```bash
-cd ~/ros2_ws/src/turtlebot_datasets/scripts
+cd ~/ros2_ws/src/datasets/scripts
 bash download_dataset.sh
 ```
 
