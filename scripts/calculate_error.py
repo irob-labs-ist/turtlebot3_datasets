@@ -47,7 +47,9 @@ class ErrorCalculator(Node):
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
         # Warn if sim time is not enabled
-        self.declare_parameter('use_sim_time', False)
+        if not self.has_parameter('use_sim_time'):
+            self.declare_parameter('use_sim_time', False)
+
         if not self.get_parameter('use_sim_time').value:
             self.get_logger().fatal(
                 'use_sim_time is False — you should run with '
